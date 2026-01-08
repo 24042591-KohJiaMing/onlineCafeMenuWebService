@@ -1,0 +1,46 @@
+const express = require('express');
+const mysql = require('mysql2/promise');
+require('dotenv').config();
+const port = 3000;
+
+//database config info
+const dbConfig = {
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+    waitForConnections: true,
+    connectionLimit: 100,
+    queueLimit: 0,
+};
+
+const app = express();
+app.use(express.json());
+
+//start the server
+app.listen(port, () => {console.log(`Server running on port`, port)});
+
+app.get('/allmenu', async (req, res) => {
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute('SELECT * FROM defaultdb.cafemenu');
+        res.json(rows);
+    } catch(err) {
+        console.log(err);
+        res.status(500).json({message: 'Server error for allmenu'})
+    }
+})
+
+app.post('/addmenuItem', async (req, res) => {
+    const { name, price, category, image } = req.body;
+    try {
+        let connection = await mysql.createConnection(dbConfig);
+        await connection.execute('INSERT INTO cafemenu (name, price, category, image) VALUES (?, ?, ?, ?)', [name, price, category, image]);
+        res.status(201).json({message: 'Menu Item '+name+' added Successfully'});
+    }
+    catch(err) {
+        console.log(err);
+        res.status(500).json({message: 'Server error - could not add Menu Item '+ name})
+    }
+});
